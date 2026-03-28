@@ -1,14 +1,101 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id // Clerk userId
+  createdAt DateTime @default(now())
+
+  memberships RoomMember[]
+  predictions Prediction[]
+  points      PointsLedger[]
+}
+
+model Room {
+  id         String   @id @default(uuid())
+  name       String
+  adminId    String
+  inviteCode String   @unique
+  createdAt  DateTime @default(now())
+
+  members     RoomMember[]
+  predictions Prediction[]
+  points      PointsLedger[]
+}
+
+model RoomMember {
+  id     String @id @default(uuid())
+  userId String
+  roomId String
+
+  user User @relation(fields: [userId], references: [id])
+  room Room @relation(fields: [roomId], references: [id])
+
+  joinedAt DateTime @default(now())
+
+  @@unique([userId, roomId])
+}
+
+model Match {
+  id              String   @id @default(uuid())
+  externalMatchId String   @unique
+  teamA           String
+  teamB           String
+  matchDate       DateTime
+  status          MatchStatus
+  winnerTeam      String?
+  isProcessed     Boolean  @default(false)
+
+  predictions Prediction[]
+  points      PointsLedger[]
+}
+
+model Prediction {
+  id      String @id @default(uuid())
+  userId  String
+  roomId  String
+  matchId String
+
+  selectedTeam String
+  createdAt    DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id])
+  room  Room  @relation(fields: [roomId], references: [id])
+  match Match @relation(fields: [matchId], references: [id])
+
+  @@unique([userId, roomId, matchId])
+}
+
+model PointsLedger {
+  id      String @id @default(uuid())
+  userId  String
+  roomId  String
+  matchId String
+
+  points Int
+  reason PointReason
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id])
+  room  Room  @relation(fields: [roomId], references: [id])
+  match Match @relation(fields: [matchId], references: [id])
+
+  @@index([roomId, userId])
+}
+
+enum MatchStatus {
+  SCHEDULED
+  LIVE
+  COMPLETED
+  ABANDONED
+}
+
+enum PointReason {
+  WIN
+  LOSS
 }
