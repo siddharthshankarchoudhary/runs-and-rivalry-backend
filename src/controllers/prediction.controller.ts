@@ -30,3 +30,51 @@ export const createPrediction = async (req: Request, res: Response) => {
         res.status(400).json({ error: err.message });
     }
 };
+
+export const getPredictionsForRoom = async (req: Request, res: Response) => {
+    try {
+        const userId = req.auth.userId;
+        const { roomId } = req.params;
+
+        if (!userId) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+
+        if (!roomId) {
+            return res.status(400).json({ error: "Room ID required" });
+        }
+
+        const predictions = await predictionService.getPredictionsForRoom(
+            roomId,
+            userId
+        );
+
+        res.json(predictions);
+    } catch (err: any) {
+        res.status(400).json({ error: err.message });
+    }
+};
+
+export const deletePrediction = async (req: Request, res: Response) => {
+    try {
+        const userId = req.auth.userId;
+        const { predictionId } = req.params;
+
+        if (!userId) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+
+        if (!predictionId) {
+            return res.status(400).json({ error: "Prediction ID required" });
+        }
+
+        const result = await predictionService.deletePrediction(
+            predictionId,
+            userId
+        );
+
+        res.json(result);
+    } catch (err: any) {
+        res.status(400).json({ error: err.message });
+    }
+};

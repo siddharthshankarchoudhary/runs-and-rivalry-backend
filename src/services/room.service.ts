@@ -57,3 +57,75 @@ export const joinRoom = async (userId: string, inviteCode: string) => {
 
     return { message: "Joined successfully", roomId: room.id };
 };
+
+export const getUserRooms = async (userId: string) => {
+    const rooms = await prisma.roomMember.findMany({
+        where: { userId },
+        include: {
+            room: {
+                include: {
+                    members: {
+                        include: {
+                            user: true,
+                        },
+                    },
+                },
+            },
+        },
+    });
+
+    return rooms.map((m) => ({
+        id: m.room.id,
+        name: m.room.name,
+        adminId: m.room.adminId,
+        inviteCode: m.room.inviteCode,
+        createdAt: m.room.createdAt,
+        membersCount: m.room.members.length,
+        members: m.room.members.map((member) => ({
+            userId: member.userId,
+            userName: member.user.id, // TODO: Get name from Clerk
+            joinedAt: member.joinedAt,
+        })),
+    }));
+};
+
+export const getRoomDetails = async (roomId: string, userId: string) => {
+    // Verify user is part of room
+    const membership = await prisma.roomMember.findUnique({
+        where: {
+            userId_roomId: { userId, roomId },
+        },
+    });
+
+    if (!membership) {
+        throw new Error("User not part of this room");
+    }
+
+    const room = await prisma.room.findUnique({
+        where: { id: roomId },
+        include: {
+            members: {
+                include: {
+                    user: true,
+                },
+            },
+        },
+    });
+
+    if (!room) {
+        throw new Error("Room not found");
+    }
+
+    return {
+        id: room.id,
+        name: room.name,
+        adminId: room.adminId,
+        inviteCode: room.inviteCode,
+        createdAt: room.createdAt,
+        members: room.members.map((m) => ({
+            userId: m.userId,
+            userName: m.user.id, // TODO: Get name from Clerk
+            joinedAt: m.joinedAt,
+        })),
+    };
+};
