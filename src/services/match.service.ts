@@ -4,17 +4,29 @@ import { fetchIPLMatches, fetchMatchResult } from "../utils/ipl-api";
 import { MatchStatus } from "../types/match.types";
 
 export const getDailyMatches = async (date?: Date) => {
-    const targetDate = date || new Date();
-    targetDate.setHours(0, 0, 0, 0);
+    // Use UTC dates for consistent timezone handling
+    const targetDate = date ? new Date(date) : new Date();
 
-    const nextDate = new Date(targetDate);
-    nextDate.setDate(nextDate.getDate() + 1);
+    // Create start of day in UTC
+    const startOfDay = new Date(Date.UTC(
+        targetDate.getUTCFullYear(),
+        targetDate.getUTCMonth(),
+        targetDate.getUTCDate(),
+        0,
+        0,
+        0,
+        0
+    ));
+
+    // Create start of next day in UTC
+    const endOfDay = new Date(startOfDay);
+    endOfDay.setUTCDate(endOfDay.getUTCDate() + 1);
 
     const matches = await prisma.match.findMany({
         where: {
             matchDate: {
-                gte: targetDate,
-                lt: nextDate,
+                gte: startOfDay,
+                lt: endOfDay,
             },
         },
         orderBy: {

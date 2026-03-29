@@ -50,48 +50,12 @@ if (!API_KEY) {
 
 /**
  * Get current IPL series ID
- * Searches for the currently active/ongoing IPL series based on today's date
+ * Uses the configured series ID from environment, which should be the current active series
  */
 const getIPLSeriesId = async (): Promise<string | null> => {
-    if (!API_KEY) return CURRENT_IPL_SERIES_ID;
-
-    try {
-        const response = await fetch(
-            `${API_BASE_URL}/series?apikey=${API_KEY}&search=IPL&offset=0`
-        );
-        const data = await response.json();
-
-        if (data.status === "success" && data.data && data.data.length > 0) {
-            const today = new Date();
-
-            // Find the currently active IPL series based on date range
-            for (const series of data.data) {
-                const startDate = series.startDate || series.startdate;
-                const endDate = series.endDate || series.enddate;
-
-                if (!startDate || !endDate) continue;
-
-                const seriesStart = new Date(startDate);
-                const seriesEnd = new Date(endDate);
-
-                // Check if current date falls within series date range (with some buffer)
-                if (today >= seriesStart && today <= seriesEnd) {
-                    console.log(`Found active IPL series: ${series.name} (ID: ${series.id})`);
-                    return series.id;
-                }
-            }
-
-            // If no active series found, return the first one (most recent)
-            const mostRecentSeries = data.data[0];
-            console.log(`No currently active series found. Using most recent: ${mostRecentSeries.name} (ID: ${mostRecentSeries.id})`);
-            return mostRecentSeries.id;
-        }
-    } catch (error) {
-        console.error("Series search failed, using fallback series ID:", error);
-    }
-
-    // Fallback to configured current series
-    console.log(`Using fallback IPL series ID: ${CURRENT_IPL_SERIES_ID}`);
+    // Directly use the configured series ID from environment
+    // The environment variable should be updated when a new season begins
+    console.log(`Using configured IPL series ID: ${CURRENT_IPL_SERIES_ID}`);
     return CURRENT_IPL_SERIES_ID;
 };
 
@@ -190,12 +154,19 @@ const generateMockMatches = (date?: Date): IPLMatch[] => {
         "Sunrisers Hyderabad",
     ];
 
-    const matchDate = date || new Date();
-    matchDate.setHours(0, 0, 0, 0);
+    // Use UTC for consistent timezone handling
+    const now = new Date();
+    const today = new Date(Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate(),
+        0,
+        0,
+        0,
+        0
+    ));
 
     const mockMatches: IPLMatch[] = [];
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
 
     for (let i = 1; i <= 2; i++) {
         const teamA = IPL_TEAMS[Math.floor(Math.random() * IPL_TEAMS.length)];
@@ -204,12 +175,16 @@ const generateMockMatches = (date?: Date): IPLMatch[] => {
             teamB = IPL_TEAMS[Math.floor(Math.random() * IPL_TEAMS.length)];
         }
 
+        // Create match times in UTC (4 hours apart starting from 14:30 UTC)
+        const matchTime = new Date(today);
+        matchTime.setUTCHours(14 + i * 2, 30, 0, 0);
+
         mockMatches.push({
             id: `mock_match_${i}`,
             externalMatchId: `mock_ext_match_${i}`,
             teamA,
             teamB,
-            matchDate: new Date(today.getTime() + i * 4 * 60 * 60 * 1000),
+            matchDate: matchTime,
             status: "SCHEDULED",
         });
     }
