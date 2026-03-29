@@ -16,7 +16,12 @@ export const createRoom = async (userId: string, name: string) => {
             inviteCode,
             members: {
                 create: {
-                    userId,
+                    user: {
+                        connectOrCreate: {
+                            where: { id: userId },
+                            create: { id: userId },
+                        },
+                    },
                 },
             },
         },
@@ -50,8 +55,15 @@ export const joinRoom = async (userId: string, inviteCode: string) => {
 
     await prisma.roomMember.create({
         data: {
-            userId,
-            roomId: room.id,
+            user: {
+                connectOrCreate: {
+                    where: { id: userId },
+                    create: { id: userId },
+                },
+            },
+            room: {
+                connect: { id: room.id },
+            },
         },
     });
 
