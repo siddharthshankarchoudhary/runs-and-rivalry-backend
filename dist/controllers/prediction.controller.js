@@ -42,59 +42,29 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getRoomDetails = exports.getUserRooms = exports.joinRoom = exports.createRoom = void 0;
-const roomService = __importStar(require("../services/room.service"));
-const createRoom = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.deletePrediction = exports.getPredictionsForRoom = exports.createPrediction = void 0;
+const predictionService = __importStar(require("../services/prediction.service"));
+const createPrediction = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = req.auth.userId;
         if (!userId) {
             return res.status(401).json({ error: "Unauthorized" });
         }
-        const { name } = req.body;
-        if (!name) {
-            return res.status(400).json({ error: "Room name required" });
+        const { roomId, matchId, selectedTeam } = req.body;
+        if (!roomId || !matchId || !selectedTeam) {
+            return res.status(400).json({
+                error: "roomId, matchId and selectedTeam are required",
+            });
         }
-        const room = yield roomService.createRoom(userId, name);
-        res.json(room);
-    }
-    catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-exports.createRoom = createRoom;
-const joinRoom = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const userId = req.auth.userId;
-        if (!userId) {
-            return res.status(401).json({ error: "Unauthorized" });
-        }
-        const { inviteCode } = req.body;
-        if (!inviteCode) {
-            return res.status(400).json({ error: "Invite code required" });
-        }
-        const result = yield roomService.joinRoom(userId, inviteCode);
+        const result = yield predictionService.createPrediction(userId, roomId, matchId, selectedTeam);
         res.json(result);
     }
     catch (err) {
         res.status(400).json({ error: err.message });
     }
 });
-exports.joinRoom = joinRoom;
-const getUserRooms = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const userId = req.auth.userId;
-        if (!userId) {
-            return res.status(401).json({ error: "Unauthorized" });
-        }
-        const rooms = yield roomService.getUserRooms(userId);
-        res.json(rooms);
-    }
-    catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-exports.getUserRooms = getUserRooms;
-const getRoomDetails = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.createPrediction = createPrediction;
+const getPredictionsForRoom = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const userId = req.auth.userId;
         const { roomId } = req.params;
@@ -104,11 +74,29 @@ const getRoomDetails = (req, res) => __awaiter(void 0, void 0, void 0, function*
         if (!roomId) {
             return res.status(400).json({ error: "Room ID required" });
         }
-        const room = yield roomService.getRoomDetails(roomId, userId);
-        res.json(room);
+        const predictions = yield predictionService.getPredictionsForRoom(roomId, userId);
+        res.json(predictions);
     }
     catch (err) {
         res.status(400).json({ error: err.message });
     }
 });
-exports.getRoomDetails = getRoomDetails;
+exports.getPredictionsForRoom = getPredictionsForRoom;
+const deletePrediction = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = req.auth.userId;
+        const { predictionId } = req.params;
+        if (!userId) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+        if (!predictionId) {
+            return res.status(400).json({ error: "Prediction ID required" });
+        }
+        const result = yield predictionService.deletePrediction(predictionId, userId);
+        res.json(result);
+    }
+    catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+exports.deletePrediction = deletePrediction;

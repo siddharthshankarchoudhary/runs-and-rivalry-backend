@@ -31,5 +31,4 @@ export const getLeaderboard = async (roomId: string) => {
         }));
 
     return leaderboard;
-};
 }

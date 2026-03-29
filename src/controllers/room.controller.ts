@@ -69,7 +69,7 @@ export const getRoomDetails = async (req: Request, res: Response) => {
             return res.status(400).json({ error: "Room ID required" });
         }
 
-        const room = await roomService.getRoomDetails(roomId, userId);
+        const room = await roomService.getRoomDetails(roomId as string, userId);
         res.json(room);
     } catch (err: any) {
         res.status(400).json({ error: err.message });

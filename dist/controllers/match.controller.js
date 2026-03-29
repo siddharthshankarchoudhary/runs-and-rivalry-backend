@@ -42,73 +42,43 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getRoomDetails = exports.getUserRooms = exports.joinRoom = exports.createRoom = void 0;
-const roomService = __importStar(require("../services/room.service"));
-const createRoom = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.getMatch = exports.syncMatches = exports.getDailyMatches = void 0;
+const matchService = __importStar(require("../services/match.service"));
+const getDailyMatches = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const userId = req.auth.userId;
-        if (!userId) {
-            return res.status(401).json({ error: "Unauthorized" });
-        }
-        const { name } = req.body;
-        if (!name) {
-            return res.status(400).json({ error: "Room name required" });
-        }
-        const room = yield roomService.createRoom(userId, name);
-        res.json(room);
+        const matches = yield matchService.getDailyMatches();
+        res.json(matches);
     }
     catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
-exports.createRoom = createRoom;
-const joinRoom = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.getDailyMatches = getDailyMatches;
+const syncMatches = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const userId = req.auth.userId;
-        if (!userId) {
-            return res.status(401).json({ error: "Unauthorized" });
-        }
-        const { inviteCode } = req.body;
-        if (!inviteCode) {
-            return res.status(400).json({ error: "Invite code required" });
-        }
-        const result = yield roomService.joinRoom(userId, inviteCode);
+        // Only admins/background jobs should have access
+        const result = yield matchService.syncDailyMatches();
         res.json(result);
     }
     catch (err) {
-        res.status(400).json({ error: err.message });
+        res.status(500).json({ error: err.message });
     }
 });
-exports.joinRoom = joinRoom;
-const getUserRooms = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.syncMatches = syncMatches;
+const getMatch = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const userId = req.auth.userId;
-        if (!userId) {
-            return res.status(401).json({ error: "Unauthorized" });
+        const { matchId } = req.params;
+        if (!matchId) {
+            return res.status(400).json({ error: "Match ID required" });
         }
-        const rooms = yield roomService.getUserRooms(userId);
-        res.json(rooms);
+        const match = yield matchService.getMatch(matchId);
+        if (!match) {
+            return res.status(404).json({ error: "Match not found" });
+        }
+        res.json(match);
     }
     catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
-exports.getUserRooms = getUserRooms;
-const getRoomDetails = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const userId = req.auth.userId;
-        const { roomId } = req.params;
-        if (!userId) {
-            return res.status(401).json({ error: "Unauthorized" });
-        }
-        if (!roomId) {
-            return res.status(400).json({ error: "Room ID required" });
-        }
-        const room = yield roomService.getRoomDetails(roomId, userId);
-        res.json(room);
-    }
-    catch (err) {
-        res.status(400).json({ error: err.message });
-    }
-});
-exports.getRoomDetails = getRoomDetails;
+exports.getMatch = getMatch;

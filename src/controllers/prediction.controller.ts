@@ -45,7 +45,7 @@ export const getPredictionsForRoom = async (req: Request, res: Response) => {
         }
 
         const predictions = await predictionService.getPredictionsForRoom(
-            roomId,
+            roomId as string,
             userId
         );
 
@@ -69,7 +69,7 @@ export const deletePrediction = async (req: Request, res: Response) => {
         }
 
         const result = await predictionService.deletePrediction(
-            predictionId,
+            predictionId as string,
             userId
         );
 
