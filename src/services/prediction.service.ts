@@ -47,7 +47,7 @@ export const createPrediction = async (
     // 5. Check prediction cutoff time
     const now = new Date();
     const cutoffTime = new Date(match.matchDate.getTime() - room.predictionCutoffMinutes * 60000);
-    
+
     if (now > cutoffTime) {
         throw new Error(`Predictions closed ${room.predictionCutoffMinutes} minutes before match starts`);
     }
@@ -64,7 +64,7 @@ export const createPrediction = async (
         if (!room.allowPredictionChange) {
             throw new Error("Prediction changes are not allowed in this room");
         }
-        
+
         // Delete old prediction and create new one
         await prisma.prediction.delete({
             where: { id: existing.id },
