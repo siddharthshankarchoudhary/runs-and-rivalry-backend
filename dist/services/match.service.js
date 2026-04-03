@@ -14,15 +14,18 @@ exports.getMatch = exports.completeMatch = exports.updateMatchStatus = exports.s
 const client_1 = require("../prisma/client");
 const ipl_api_1 = require("../utils/ipl-api");
 const getDailyMatches = (date) => __awaiter(void 0, void 0, void 0, function* () {
-    const targetDate = date || new Date();
-    targetDate.setHours(0, 0, 0, 0);
-    const nextDate = new Date(targetDate);
-    nextDate.setDate(nextDate.getDate() + 1);
+    // Use UTC dates for consistent timezone handling
+    const targetDate = date ? new Date(date) : new Date();
+    // Create start of day in UTC
+    const startOfDay = new Date(Date.UTC(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), targetDate.getUTCDate(), 0, 0, 0, 0));
+    // Create start of next day in UTC
+    const endOfDay = new Date(startOfDay);
+    endOfDay.setUTCDate(endOfDay.getUTCDate() + 1);
     const matches = yield client_1.prisma.match.findMany({
         where: {
             matchDate: {
-                gte: targetDate,
-                lt: nextDate,
+                gte: startOfDay,
+                lt: endOfDay,
             },
         },
         orderBy: {

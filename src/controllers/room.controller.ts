@@ -75,3 +75,48 @@ export const getRoomDetails = async (req: Request, res: Response) => {
         res.status(400).json({ error: err.message });
     }
 };
+
+export const deleteRoom = async (req: Request, res: Response) => {
+    try {
+        const userId = req.auth.userId;
+        const { roomId } = req.params;
+
+        if (!userId) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+
+        if (!roomId) {
+            return res.status(400).json({ error: "Room ID required" });
+        }
+
+        const result = await roomService.deleteRoom(roomId as string, userId);
+        res.json(result);
+    } catch (err: any) {
+        res.status(400).json({ error: err.message });
+    }
+};
+
+export const updateRoomSettings = async (req: Request, res: Response) => {
+    try {
+        const userId = req.auth.userId;
+        const { roomId } = req.params;
+        const settings = req.body;
+
+        if (!userId) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+
+        if (!roomId) {
+            return res.status(400).json({ error: "Room ID required" });
+        }
+
+        const updatedRoom = await roomService.updateRoomSettings(
+            roomId as string,
+            userId,
+            settings
+        );
+        res.json(updatedRoom);
+    } catch (err: any) {
+        res.status(400).json({ error: err.message });
+    }
+};

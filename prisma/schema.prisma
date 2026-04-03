@@ -23,6 +23,11 @@ model Room {
   inviteCode String   @unique
   createdAt  DateTime @default(now())
 
+  // Room Settings
+  allowPredictionChange     Boolean @default(true)
+  predictionCutoffMinutes   Int     @default(30)
+  assignRandomPrediction    Boolean @default(false)
+
   members     RoomMember[]
   predictions Prediction[]
   points      PointsLedger[]

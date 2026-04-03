@@ -44,10 +44,30 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getMatch = exports.syncMatches = exports.getDailyMatches = void 0;
 const matchService = __importStar(require("../services/match.service"));
+/**
+ * Serialize match data ensuring all dates are ISO strings with 'Z' suffix for UTC
+ */
+const serializeMatches = (matches) => {
+    return matches.map(match => (Object.assign(Object.assign({}, match), { matchDate: match.matchDate instanceof Date
+            ? match.matchDate.toISOString()
+            : typeof match.matchDate === 'string'
+                ? match.matchDate.includes('Z') ? match.matchDate : match.matchDate + 'Z'
+                : match.matchDate })));
+};
+/**
+ * Serialize single match data ensuring all dates are ISO strings with 'Z' suffix for UTC
+ */
+const serializeMatch = (match) => {
+    return Object.assign(Object.assign({}, match), { matchDate: match.matchDate instanceof Date
+            ? match.matchDate.toISOString()
+            : typeof match.matchDate === 'string'
+                ? match.matchDate.includes('Z') ? match.matchDate : match.matchDate + 'Z'
+                : match.matchDate });
+};
 const getDailyMatches = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const matches = yield matchService.getDailyMatches();
-        res.json(matches);
+        res.json(serializeMatches(matches));
     }
     catch (err) {
         res.status(500).json({ error: err.message });
@@ -75,7 +95,7 @@ const getMatch = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         if (!match) {
             return res.status(404).json({ error: "Match not found" });
         }
-        res.json(match);
+        res.json(serializeMatch(match));
     }
     catch (err) {
         res.status(500).json({ error: err.message });

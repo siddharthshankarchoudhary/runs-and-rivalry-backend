@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getRoomDetails = exports.getUserRooms = exports.joinRoom = exports.createRoom = void 0;
+exports.updateRoomSettings = exports.deleteRoom = exports.getRoomDetails = exports.getUserRooms = exports.joinRoom = exports.createRoom = void 0;
 // src/services/room.service.ts
 const client_1 = require("../prisma/client");
 const crypto_1 = require("crypto");
@@ -25,7 +25,12 @@ const createRoom = (userId, name) => __awaiter(void 0, void 0, void 0, function*
             inviteCode,
             members: {
                 create: {
-                    userId,
+                    user: {
+                        connectOrCreate: {
+                            where: { id: userId },
+                            create: { id: userId },
+                        },
+                    },
                 },
             },
         },
@@ -54,8 +59,15 @@ const joinRoom = (userId, inviteCode) => __awaiter(void 0, void 0, void 0, funct
     }
     yield client_1.prisma.roomMember.create({
         data: {
-            userId,
-            roomId: room.id,
+            user: {
+                connectOrCreate: {
+                    where: { id: userId },
+                    create: { id: userId },
+                },
+            },
+            room: {
+                connect: { id: room.id },
+            },
         },
     });
     return { message: "Joined successfully", roomId: room.id };
@@ -120,6 +132,9 @@ const getRoomDetails = (roomId, userId) => __awaiter(void 0, void 0, void 0, fun
         adminId: room.adminId,
         inviteCode: room.inviteCode,
         createdAt: room.createdAt,
+        allowPredictionChange: room.allowPredictionChange,
+        predictionCutoffMinutes: room.predictionCutoffMinutes,
+        assignRandomPrediction: room.assignRandomPrediction,
         members: room.members.map((m) => ({
             userId: m.userId,
             userName: m.user.id, // TODO: Get name from Clerk
@@ -128,3 +143,52 @@ const getRoomDetails = (roomId, userId) => __awaiter(void 0, void 0, void 0, fun
     };
 });
 exports.getRoomDetails = getRoomDetails;
+const deleteRoom = (roomId, userId) => __awaiter(void 0, void 0, void 0, function* () {
+    // Verify user is admin of room
+    const room = yield client_1.prisma.room.findUnique({
+        where: { id: roomId },
+    });
+    if (!room) {
+        throw new Error("Room not found");
+    }
+    if (room.adminId !== userId) {
+        throw new Error("Only admin can delete room");
+    }
+    // Delete all related records in cascade
+    // Delete predictions first
+    yield client_1.prisma.prediction.deleteMany({
+        where: { roomId },
+    });
+    // Delete points ledger
+    yield client_1.prisma.pointsLedger.deleteMany({
+        where: { roomId },
+    });
+    // Delete room members
+    yield client_1.prisma.roomMember.deleteMany({
+        where: { roomId },
+    });
+    // Delete room
+    yield client_1.prisma.room.delete({
+        where: { id: roomId },
+    });
+    return { message: "Room deleted successfully" };
+});
+exports.deleteRoom = deleteRoom;
+const updateRoomSettings = (roomId, userId, settings) => __awaiter(void 0, void 0, void 0, function* () {
+    // Verify user is admin of room
+    const room = yield client_1.prisma.room.findUnique({
+        where: { id: roomId },
+    });
+    if (!room) {
+        throw new Error("Room not found");
+    }
+    if (room.adminId !== userId) {
+        throw new Error("Only admin can update room settings");
+    }
+    const updatedRoom = yield client_1.prisma.room.update({
+        where: { id: roomId },
+        data: settings,
+    });
+    return updatedRoom;
+});
+exports.updateRoomSettings = updateRoomSettings;

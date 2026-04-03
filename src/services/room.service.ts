@@ -134,10 +134,81 @@ export const getRoomDetails = async (roomId: string, userId: string) => {
         adminId: room.adminId,
         inviteCode: room.inviteCode,
         createdAt: room.createdAt,
+        allowPredictionChange: room.allowPredictionChange,
+        predictionCutoffMinutes: room.predictionCutoffMinutes,
+        assignRandomPrediction: room.assignRandomPrediction,
         members: room.members.map((m) => ({
             userId: m.userId,
             userName: m.user.id, // TODO: Get name from Clerk
             joinedAt: m.joinedAt,
         })),
     };
+};
+
+export const deleteRoom = async (roomId: string, userId: string) => {
+    // Verify user is admin of room
+    const room = await prisma.room.findUnique({
+        where: { id: roomId },
+    });
+
+    if (!room) {
+        throw new Error("Room not found");
+    }
+
+    if (room.adminId !== userId) {
+        throw new Error("Only admin can delete room");
+    }
+
+    // Delete all related records in cascade
+    // Delete predictions first
+    await prisma.prediction.deleteMany({
+        where: { roomId },
+    });
+
+    // Delete points ledger
+    await prisma.pointsLedger.deleteMany({
+        where: { roomId },
+    });
+
+    // Delete room members
+    await prisma.roomMember.deleteMany({
+        where: { roomId },
+    });
+
+    // Delete room
+    await prisma.room.delete({
+        where: { id: roomId },
+    });
+
+    return { message: "Room deleted successfully" };
+};
+
+export const updateRoomSettings = async (
+    roomId: string,
+    userId: string,
+    settings: {
+        allowPredictionChange?: boolean;
+        predictionCutoffMinutes?: number;
+        assignRandomPrediction?: boolean;
+    }
+) => {
+    // Verify user is admin of room
+    const room = await prisma.room.findUnique({
+        where: { id: roomId },
+    });
+
+    if (!room) {
+        throw new Error("Room not found");
+    }
+
+    if (room.adminId !== userId) {
+        throw new Error("Only admin can update room settings");
+    }
+
+    const updatedRoom = await prisma.room.update({
+        where: { id: roomId },
+        data: settings,
+    });
+
+    return updatedRoom;
 };

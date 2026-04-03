@@ -42,7 +42,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getRoomDetails = exports.getUserRooms = exports.joinRoom = exports.createRoom = void 0;
+exports.updateRoomSettings = exports.deleteRoom = exports.getRoomDetails = exports.getUserRooms = exports.joinRoom = exports.createRoom = void 0;
 const roomService = __importStar(require("../services/room.service"));
 const createRoom = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -112,3 +112,40 @@ const getRoomDetails = (req, res) => __awaiter(void 0, void 0, void 0, function*
     }
 });
 exports.getRoomDetails = getRoomDetails;
+const deleteRoom = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = req.auth.userId;
+        const { roomId } = req.params;
+        if (!userId) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+        if (!roomId) {
+            return res.status(400).json({ error: "Room ID required" });
+        }
+        const result = yield roomService.deleteRoom(roomId, userId);
+        res.json(result);
+    }
+    catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+exports.deleteRoom = deleteRoom;
+const updateRoomSettings = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = req.auth.userId;
+        const { roomId } = req.params;
+        const settings = req.body;
+        if (!userId) {
+            return res.status(401).json({ error: "Unauthorized" });
+        }
+        if (!roomId) {
+            return res.status(400).json({ error: "Room ID required" });
+        }
+        const updatedRoom = yield roomService.updateRoomSettings(roomId, userId, settings);
+        res.json(updatedRoom);
+    }
+    catch (err) {
+        res.status(400).json({ error: err.message });
+    }
+});
+exports.updateRoomSettings = updateRoomSettings;

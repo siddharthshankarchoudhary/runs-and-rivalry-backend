@@ -1,6 +1,9 @@
 // src/services/prediction.service.ts
 import { prisma } from "../prisma/client";
 
+// src/services/prediction.service.ts
+import { prisma } from "../prisma/client";
+
 export const createPrediction = async (
     userId: string,
     roomId: string,
@@ -18,7 +21,16 @@ export const createPrediction = async (
         throw new Error("User not part of this room");
     }
 
-    // 2. Get match
+    // 2. Get room settings
+    const room = await prisma.room.findUnique({
+        where: { id: roomId },
+    });
+
+    if (!room) {
+        throw new Error("Room not found");
+    }
+
+    // 3. Get match
     const match = await prisma.match.findUnique({
         where: { id: matchId },
     });
@@ -27,12 +39,20 @@ export const createPrediction = async (
         throw new Error("Match not found");
     }
 
-    // 3. Validate match state
+    // 4. Validate match state
     if (match.status !== "SCHEDULED") {
         throw new Error("Predictions are closed for this match");
     }
 
-    // 4. Prevent duplicate prediction
+    // 5. Check prediction cutoff time
+    const now = new Date();
+    const cutoffTime = new Date(match.matchDate.getTime() - room.predictionCutoffMinutes * 60000);
+    
+    if (now > cutoffTime) {
+        throw new Error(`Predictions closed ${room.predictionCutoffMinutes} minutes before match starts`);
+    }
+
+    // 6. Check if user already has a prediction
     const existing = await prisma.prediction.findUnique({
         where: {
             userId_roomId_matchId: { userId, roomId, matchId },
@@ -40,10 +60,18 @@ export const createPrediction = async (
     });
 
     if (existing) {
-        throw new Error("Prediction already exists");
+        // Check if prediction change is allowed
+        if (!room.allowPredictionChange) {
+            throw new Error("Prediction changes are not allowed in this room");
+        }
+        
+        // Delete old prediction and create new one
+        await prisma.prediction.delete({
+            where: { id: existing.id },
+        });
     }
 
-    // 5. Validate selected team
+    // 7. Validate selected team
     if (
         selectedTeam !== match.teamA &&
         selectedTeam !== match.teamB
@@ -51,7 +79,7 @@ export const createPrediction = async (
         throw new Error("Invalid team selected");
     }
 
-    // 6. Create prediction
+    // 8. Create prediction
     const prediction = await prisma.prediction.create({
         data: {
             userId,
@@ -128,4 +156,70 @@ export const deletePrediction = async (predictionId: string, userId: string) => 
     });
 
     return { message: "Prediction deleted successfully" };
+};
+
+export const assignRandomPredictions = async (roomId: string, matchId: string) => {
+    // Get room settings
+    const room = await prisma.room.findUnique({
+        where: { id: roomId },
+    });
+
+    if (!room || !room.assignRandomPrediction) {
+        return { message: "Random prediction assignment disabled" };
+    }
+
+    // Get match
+    const match = await prisma.match.findUnique({
+        where: { id: matchId },
+    });
+
+    if (!match) {
+        throw new Error("Match not found");
+    }
+
+    // Get all room members
+    const members = await prisma.roomMember.findMany({
+        where: { roomId },
+    });
+
+    // Get users who already have predictions for this match
+    const existingPredictions = await prisma.prediction.findMany({
+        where: { roomId, matchId },
+        select: { userId: true },
+    });
+
+    const existingUserIds = new Set(existingPredictions.map((p) => p.userId));
+
+    // Find users without predictions
+    const usersWithoutPredictions = members.filter(
+        (m) => !existingUserIds.has(m.userId)
+    );
+
+    if (usersWithoutPredictions.length === 0) {
+        return { message: "All users already have predictions" };
+    }
+
+    // Randomly assign predictions
+    const teams = [match.teamA, match.teamB];
+    const createdPredictions = [];
+
+    for (const member of usersWithoutPredictions) {
+        const randomTeam = teams[Math.floor(Math.random() * teams.length)];
+
+        const prediction = await prisma.prediction.create({
+            data: {
+                userId: member.userId,
+                roomId,
+                matchId,
+                selectedTeam: randomTeam,
+            },
+        });
+
+        createdPredictions.push(prediction);
+    }
+
+    return {
+        message: `Random predictions assigned to ${createdPredictions.length} users`,
+        predictions: createdPredictions,
+    };
 };

@@ -1,7 +1,9 @@
 import { processResults } from "./resultProcessor.job";
+import { assignRandomPredictionsJob } from "./randomPrediction.job";
 import { syncDailyMatches } from "../services/match.service";
 
 let isRunning = false;
+let isRandomPredictionJobRunning = false;
 
 // Sync matches on startup
 (async () => {
@@ -30,3 +32,19 @@ setInterval(async () => {
         isRunning = false;
     }
 }, 60 * 60 * 1000);
+
+// Run random prediction assignment every 5 minutes
+setInterval(async () => {
+    if (isRandomPredictionJobRunning) {
+        console.log("Skipping random prediction job, previous still in progress");
+        return;
+    }
+
+    isRandomPredictionJobRunning = true;
+
+    try {
+        await assignRandomPredictionsJob();
+    } finally {
+        isRandomPredictionJobRunning = false;
+    }
+}, 5 * 60 * 1000);
